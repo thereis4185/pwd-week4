@@ -1,4 +1,5 @@
-﻿const restaurantService = require('../services/restaurants.service');
+﻿// src/controllers/restaurants.controller.js
+const restaurantService = require('../services/restaurants.service');
 const asyncHandler = require('../utils/asyncHandler');
 
 const normaliseMenu = (menu) => {
@@ -18,15 +19,11 @@ exports.getRestaurants = asyncHandler(async (req, res) => {
   res.json({ data: restaurants });
 });
 
-exports.getRestaurantsSync = (req, res) => {
-  const restaurants = restaurantService.getAllRestaurantsSync();
-  res.json({
-    data: restaurants,
-    meta: {
-      execution: 'synchronous'
-    }
-  });
-};
+exports.getPopularRestaurants = asyncHandler(async (req, res) => {
+  const limit = Number(req.query.limit) || 5;
+  const restaurants = await restaurantService.getPopularRestaurants(limit);
+  res.json({ data: restaurants });
+});
 
 exports.getRestaurant = asyncHandler(async (req, res) => {
   const restaurant = await restaurantService.getRestaurantById(req.params.id);
@@ -39,12 +36,6 @@ exports.getRestaurant = asyncHandler(async (req, res) => {
   res.json({ data: restaurant });
 });
 
-exports.getPopularRestaurants = asyncHandler(async (req, res) => {
-  const limit = req.query.limit ? Number(req.query.limit) : 5;
-  const restaurants = await restaurantService.getPopularRestaurants(limit);
-  res.json({ data: restaurants });
-});
-
 exports.createRestaurant = asyncHandler(async (req, res) => {
   const payload = {
     ...req.body,
@@ -55,8 +46,25 @@ exports.createRestaurant = asyncHandler(async (req, res) => {
   res.status(201).json({ data: restaurant });
 });
 
-exports.resetDemoData = asyncHandler(async (req, res) => {
-  restaurantService.resetStore();
-  const restaurants = await restaurantService.getAllRestaurants();
-  res.json({ data: restaurants });
+exports.updateRestaurant = asyncHandler(async (req, res) => {
+  const payload = {
+    ...req.body,
+    recommendedMenu: normaliseMenu(req.body?.recommendedMenu)
+  };
+
+  const updated = await restaurantService.updateRestaurant(req.params.id, payload);
+  if (!updated) {
+    res.status(404).json({ error: { message: 'Restaurant not found' } });
+    return;
+  }
+  res.json({ data: updated });
+});
+
+exports.deleteRestaurant = asyncHandler(async (req, res) => {
+  const deleted = await restaurantService.deleteRestaurant(req.params.id);
+  if (!deleted) {
+    res.status(404).json({ error: { message: 'Restaurant not found' } });
+    return;
+  }
+  res.status(204).send();
 });
